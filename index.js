@@ -19,7 +19,9 @@ require("./config/db");
 const InvestmentPlanRouter = require("./routes/investment-plans");
 const UserRouter = require("./routes/user");
 const UserPlanRouter = require("./routes/user-plans");
+const PaymentRouter = require("./routes/payments");
 
 app.use("/api/admin", InvestmentPlanRouter);
 app.use("/api/user", UserRouter);
 app.use("/api/user/user-plans", UserPlanRouter);
+app.use("/api/user/payments", PaymentRouter);
