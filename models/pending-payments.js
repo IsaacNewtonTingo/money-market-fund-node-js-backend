@@ -6,9 +6,9 @@ const PendingPaymentSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
-  plan: {
+  userPlan: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "InvestmentPlan",
+    ref: "UserPlan",
   },
   amount: Number,
 

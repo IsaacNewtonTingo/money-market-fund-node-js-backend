@@ -8,6 +8,7 @@ const UserPlan = require("../models/user-plans");
 const datetime = require("node-datetime");
 const PendingPayment = require("../models/pending-payments");
 const { json } = require("body-parser");
+const CompletedPayment = require("../models/completed-payments");
 
 require("dotenv").config;
 
@@ -112,7 +113,7 @@ router.post("/make-payment", access, async (req, res) => {
                             PartyB: 174379,
                             PhoneNumber: parseInt(phoneNumber),
                             CallBackURL:
-                              "https://ni-hire-backend.herokuapp.com/user/payment-response",
+                              "https://8f3d-105-27-98-86.ngrok.io/api/user/payments/payment-response",
                             AccountReference: "CompanyXLTD",
                             TransactionDesc: "Payment of X",
                           },
@@ -120,7 +121,13 @@ router.post("/make-payment", access, async (req, res) => {
                         async function (error, response, body) {
                           if (error) {
                             console.log(error);
+                            res.json({
+                              status: "Failed",
+                              message:
+                                "Something went wrong trying to process your payment",
+                            });
                           } else {
+                            console.log("-------STK push is on the way------");
                             const responseIDs = body;
 
                             const newPendingPayment = new PendingPayment({
@@ -201,7 +208,79 @@ router.post("/make-payment", access, async (req, res) => {
 
 //payment response
 router.post("/payment-response", async (req, res) => {
-  console.log(req.body.Body);
+  console.log("--------Data received in the callback url---------");
+  if (req.body.Body.stkCallback.ResultCode == 0) {
+    //successfull payment
+    console.log(req.body.Body.stkCallback);
+    const { MerchantRequestID, CheckoutRequestID } = req.body.Body.stkCallback;
+    const amount = req.body.Body.stkCallback.CallbackMetadata.Item[0].Value;
+
+    //get pending payment records
+    //update pending payment records
+
+    console.log("-------------Updating pending payment records--------------");
+    await PendingPayment.findOneAndUpdate(
+      {
+        $and: [
+          { merchantRequestID: MerchantRequestID },
+          { checkoutRequestID: CheckoutRequestID },
+        ],
+      },
+      { verified: true }
+    )
+      .then(async (response) => {
+        console.log(
+          "-----------Finished updating pending payment records----------"
+        );
+        if (response) {
+          //records found and updated
+          //add records to completed payments
+
+          const { user, userPlan } = response;
+
+          const newCompletedPayment = new CompletedPayment({
+            user: user,
+            userPlan: userPlan,
+            amountPaid: amount,
+            dateOfPayment: Date.now(),
+            dateVerified: Date.now(),
+          });
+
+          console.log(
+            "------------Creating a completed payment record-----------"
+          );
+          await newCompletedPayment
+            .save()
+            .then(async () => {
+              //update user plan
+              await UserPlan.findOneAndUpdate(
+                {
+                  $and: [{ user: user }, { plane: userPlan }],
+                },
+                { active: true, $inc: { amountAvailable: amount } }
+              ).then(() => {
+                console.log("Payment successfully made");
+              });
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+        } else {
+          //no records found so nothing updated
+          console.log("No records found");
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.json({
+          status: "Failed",
+          message: "An error occured while updating pending payment records",
+        });
+      });
+  } else {
+    //Payment unsuccessfull
+    console.log("Payment not completed. Something went wrong");
+  }
 });
 
 //check if user has paid

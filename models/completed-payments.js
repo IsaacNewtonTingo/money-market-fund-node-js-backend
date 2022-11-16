@@ -7,13 +7,15 @@ const CompletedPaymentSchema = new Schema({
     ref: "User",
   },
 
-  plan: {
+  userPlan: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "InvestmentPlan",
+    ref: "UserPlan",
   },
 
-  amount: Number,
-  expiryDate: Date,
+  amountPaid: Number,
+
+  dateOfPayment: Date,
+  dateVerified: Date,
 });
 
 const CompletedPayment = mongoose.model(
