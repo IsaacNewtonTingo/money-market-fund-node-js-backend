@@ -6,7 +6,7 @@ const router = express.Router();
 
 //join plan
 router.post("/join-plan", async (req, res) => {
-  const { userID, planID } = req.body;
+  let { userID, planID, maturityDate } = req.body;
 
   if (!userID) {
     res.json({
@@ -29,47 +29,32 @@ router.post("/join-plan", async (req, res) => {
             .then(async (response) => {
               if (response) {
                 //plan found
-                //check if they already on that plan
-                await UserPlan.findOne({ user: userID })
-                  .then(async (response) => {
-                    if (response) {
-                      //on that plan already
-                      res.json({
-                        status: "Failed",
-                        message: "You're already on this plan",
-                      });
-                    } else {
-                      //not in that plan
-                      const newUserPlan = new UserPlan({
-                        user: userID,
-                        plan: planID,
-                        amountAvailable: 0,
-                        active: false,
-                        dateCreated: Date.now(),
-                        maturityDate: null,
-                      });
 
-                      await newUserPlan
-                        .save()
-                        .then(() => {
-                          res.json({
-                            status: "Success",
-                            message: "Plan created successfully",
-                          });
-                        })
-                        .catch((err) => {
-                          console.log(err);
-                          res.json({
-                            status: "Failed",
-                            message: "An error occured while saving user plan",
-                          });
-                        });
-                    }
+                const newUserPlan = new UserPlan({
+                  user: userID,
+                  plan: planID,
+                  amountAvailable: 0,
+                  active: false,
+                  dateCreated: Date.now(),
+                  maturityDate:
+                    planID === "637396ec11bf84a62c63cafa"
+                      ? Date.now() + maturityDate * 86400000
+                      : null,
+                });
+
+                await newUserPlan
+                  .save()
+                  .then(() => {
+                    res.json({
+                      status: "Success",
+                      message: "Plan created successfully",
+                    });
                   })
                   .catch((err) => {
+                    console.log(err);
                     res.json({
                       status: "Failed",
-                      message: "Error occured while checking user plan records",
+                      message: "An error occured while saving user plan",
                     });
                   });
               } else {
