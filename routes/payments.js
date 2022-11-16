@@ -284,5 +284,72 @@ router.post("/payment-response", async (req, res) => {
 });
 
 //check if user has paid
+router.post("/check-payment-status", access, async (req, res) => {
+  const { CheckoutRequestID } = req.body;
+  if (!CheckoutRequestID) {
+    res.json({
+      status: "Failed",
+      message: "Checkout request ID is required",
+    });
+  } else {
+    let auth = "Bearer " + req.access_token;
+    let datenow = datetime.create();
+    const timestamp = datenow.format("YmdHMS");
+
+    const password = new Buffer.from(
+      "174379" +
+        "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919" +
+        timestamp
+    ).toString("base64");
+    request(
+      {
+        url: "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query",
+        method: "POST",
+        headers: {
+          Authorization: auth,
+        },
+        json: {
+          BusinessShortCode: 174379,
+          Password: password,
+          Timestamp: timestamp,
+          CheckoutRequestID: CheckoutRequestID,
+        },
+      },
+      async function (error, response, body) {
+        if (error) {
+          console.log(error);
+          res.json({
+            status: "Failed",
+            message:
+              "Something went wrong while trying to process your request",
+          });
+        } else {
+          if (!body.ResponseCode) {
+            //sth went wrong
+            res.json({
+              status: "Failed",
+              message:
+                "Something went wrong while trying to process your request",
+            });
+          } else {
+            //theres a response
+            if (body.ResultCode != 0) {
+              res.json({
+                status: "Failed",
+                message: "Your transaction was not completed. Please try again",
+              });
+            } else {
+              //Transaction success
+              res.json({
+                status: "Success",
+                message: body.ResultDesc,
+              });
+            }
+          }
+        }
+      }
+    );
+  }
+});
 
 module.exports = router;
