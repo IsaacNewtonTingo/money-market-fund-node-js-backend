@@ -7,6 +7,7 @@ require("dotenv").config();
 const User = require("../models/user");
 const UserVerification = require("../models/user-verification");
 const PasswordReset = require("../models/password-reset");
+const { EmailChange } = require("../models/email-change");
 
 let transporter = nodemailer.createTransport({
   service: "gmail",
@@ -600,7 +601,16 @@ router.get("/get-user-profile/:id", async (req, res) => {
   } else {
     await User.findOne({ _id: userID }, "-password -verified")
       .then((response) => {
-        res.send(response);
+        if (response) {
+          //user found
+          res.send(response);
+        } else {
+          //user not found
+          res.json({
+            status: "Failed",
+            message: "User not found",
+          });
+        }
       })
       .catch((err) => {
         console.log(err);
@@ -610,6 +620,486 @@ router.get("/get-user-profile/:id", async (req, res) => {
         });
       });
   }
+});
+
+//edit profile
+router.put("/update-profile/:id", async (req, res) => {
+  const userID = req.params.id;
+  let { password, email } = req.body;
+  const filter = { _id: userID };
+
+  //validate user
+  if (!email || !password) {
+    res.json({
+      status: "Failed",
+      message: "All fields are required",
+    });
+  } else {
+    password = password.trim();
+    email = email.trim();
+
+    User.find({ email })
+      .then((data) => {
+        if (data.length) {
+          const hashedPassword = data[0].password;
+          bcrypt
+            .compare(password, hashedPassword)
+            .then(async (result) => {
+              if (result) {
+                await User.findOneAndUpdate(
+                  filter,
+                  {
+                    firstName: req.body.firstName,
+                    lastName: req.body.lastName,
+                    profilePicture: req.body.profilePicture,
+                  },
+                  {
+                    new: true,
+                  }
+                )
+                  .then(() => {
+                    res.json({
+                      status: "Success",
+                      message: "Profile updated successfully",
+                    });
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.json({
+                      status: "Failed",
+                      message: "Error occured while updating user",
+                    });
+                  });
+              } else {
+                res.json({
+                  status: "Failed",
+                  message: "Invalid password",
+                });
+              }
+            })
+            .catch((err) => {
+              console.log(err);
+              res.json({
+                status: "Failed",
+                message: "Error occured while comparing passwords",
+              });
+            });
+        } else {
+          res.json({
+            status: "Failed",
+            message: "Invalid credentials entered",
+          });
+        }
+      })
+      .catch((err) => {
+        res.json({
+          status: "Failed",
+          message: "Error occured checking existing user",
+        });
+      });
+  }
+});
+
+//edit email
+router.post("/edit-email/:id", async (req, res) => {
+  const userID = req.params.id;
+  let { newEmail, password } = req.body;
+
+  newEmail = newEmail.trim();
+  password = password.trim();
+
+  //check if user exists
+  await User.findOne({ _id: userID })
+    .then(async (response) => {
+      if (response) {
+        //user found
+        //confirm password
+        const hashedPassword = response.password;
+        bcrypt
+          .compare(password, hashedPassword)
+          .then(async (response) => {
+            if (response) {
+              //Check if email has been used
+              await User.find({ email: newEmail })
+                .then(async (response) => {
+                  if (response.length > 0) {
+                    //email exists
+                    res.json({
+                      status: "Failed",
+                      message:
+                        "Email provided has already been used. Try a different one",
+                    });
+                  } else {
+                    //email doesnt exist
+                    sendChangeEmailRequest({ userID, newEmail }, res);
+                  }
+                })
+                .catch((err) => {
+                  console.log(err);
+                  res.json({
+                    status: "Failed",
+                    message: "Error occured while checking email records",
+                  });
+                });
+            } else {
+              //invalid pass
+              res.json({
+                status: "Failed",
+                message: "Invalid password",
+              });
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+            res.json({
+              status: "Failed",
+              message: "Error occured whilecomparing passwords",
+            });
+          });
+      } else {
+        //user not found
+        res.json({
+          status: "Failed",
+          message: "User not found",
+        });
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.json({
+        status: "Failed",
+        message: "Error occured while searching user",
+      });
+    });
+});
+
+//send change request
+const sendChangeEmailRequest = ({ userID, newEmail }, res) => {
+  const confirmationCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+  const mailOptions = {
+    from: process.env.AUTH_EMAIL,
+    to: newEmail,
+    subject: "Verify your email",
+    html: `<p>Hello,<br/>You've request an email change request.<br/>Here is your verification code: <h2>${confirmationCode}</h2><br/>The code expires in the next 1hr.</p>`,
+  };
+
+  const saltRounds = 10;
+  bcrypt
+    .hash(confirmationCode, saltRounds)
+    .then(async (hashedConfirmationCode) => {
+      const newEmailChange = new EmailChange({
+        userID: userID,
+        newEmail: newEmail,
+        uniqueCode: hashedConfirmationCode,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 3600000,
+      });
+
+      //first check if there was a previous request
+      await EmailChange.find({
+        userID,
+      })
+
+        .then(async (response) => {
+          if (response.length > 0) {
+            //there were previous requests
+            await EmailChange.deleteMany({
+              userID,
+            }).then(() => {
+              newEmailChange
+                .save()
+                .then(() => {
+                  transporter
+                    .sendMail(mailOptions)
+                    .then(() => {
+                      res.json({
+                        status: "Pending",
+                        message:
+                          "Verification email sent.Check your mailbox to verify new email",
+                      });
+                    })
+                    .catch((err) => {
+                      console.log(err);
+                      res.json({
+                        status: "Failed",
+                        message: "Error occured sending verification email",
+                      });
+                    });
+                })
+                .catch((err) => {
+                  console.log(err);
+                  res.json({
+                    status: "Failed",
+                    message: "Couldn't save verification email data",
+                  });
+                });
+            });
+          } else {
+            //noprevious req
+            newEmailChange
+              .save()
+              .then(() => {
+                transporter
+                  .sendMail(mailOptions)
+                  .then(() => {
+                    res.json({
+                      status: "Pending",
+                      message:
+                        "Verification email sent.Check your mailbox to verify new email",
+                    });
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.json({
+                      status: "Failed",
+                      message: "Error occured sending verification email",
+                    });
+                  });
+              })
+              .catch((err) => {
+                console.log(err);
+                res.json({
+                  status: "Failed",
+                  message: "Couldn't save verification email data",
+                });
+              });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          res.json({
+            status: "Failed",
+            message: "Error occured checking email change records",
+          });
+        });
+    })
+    .catch((err) => {
+      console.log(err);
+      res.json({
+        status: "Failed",
+        message: "Error occured hashing email data",
+      });
+    });
+};
+
+//verify new email
+router.post("/verify-new-email/:id", async (req, res) => {
+  const userID = req.params.id;
+  const { newEmail, secretCode } = req.body;
+  //check if user exists
+  await User.findOne({ _id: userID })
+    .then(async (response) => {
+      if (response) {
+        //user found
+        //check if change request exists
+        await EmailChange.find({
+          $and: [{ userID }, { newEmail }],
+        })
+          .then(async (response) => {
+            if (response.length > 0) {
+              //requestfound
+              //check if it has expired
+              const { newEmail, expiresAt } = response[0];
+
+              const storedSecret = response[0].uniqueCode;
+
+              if (expiresAt < Date.now()) {
+                //Has expired
+                //Delete record
+                await EmailChange.deleteMany({
+                  userID,
+                })
+                  .then(() => {
+                    res.json({
+                      status: "Failed",
+                      message:
+                        "The code you entered has expired. Please request another",
+                    });
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.json({
+                      status: "Failed",
+                      message:
+                        "An error occured while deleting outdated email change request records",
+                    });
+                  });
+              } else {
+                //not expired
+                //check if code is correct
+                await bcrypt
+                  .compare(secretCode, storedSecret)
+                  .then(async (response) => {
+                    if (response) {
+                      //matched
+
+                      await User.findOneAndUpdate(
+                        { _id: userID },
+                        { email: newEmail }
+                      )
+                        .then(async () => {
+                          //delete record
+                          await EmailChange.deleteMany({
+                            userID,
+                          })
+                            .then((response) => {
+                              res.json({
+                                status: "Success",
+                                message: "Email updated successfully",
+                              });
+                            })
+                            .catch((err) => {
+                              console.log(err);
+                              res.json({
+                                status: "Failed",
+                                message:
+                                  "An error occured while deleting updated email change request",
+                              });
+                            });
+                        })
+                        .catch((err) => {
+                          console.log(err);
+                          res.json({
+                            status: "Failed",
+                            message: "An error occured while updating email",
+                          });
+                        });
+                    } else {
+                      res.json({
+                        status: "Failed",
+                        message: "Invalid code",
+                      });
+                    }
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.json({
+                      status: "Failed",
+                      message: "An error occured while comparing code",
+                    });
+                  });
+              }
+            } else {
+              //request not found
+              res.json({
+                status: "Failed",
+                message: "Email change request not found",
+              });
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+            res.json({
+              status: "Failed",
+              message: "An error occured while getting email change records",
+            });
+          });
+      } else {
+        //user not found
+        res.json({
+          status: "Failed",
+          message: "User not found",
+        });
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.json({
+        status: "Failed",
+        message: "An error occured while getting user status",
+      });
+    });
+});
+
+//edit phone number
+router.post("/edit-phone-number/:id", async (req, res) => {
+  const { phoneNumber, password } = req.body;
+  const userID = req.params.id;
+
+  //check if user exists
+
+  await User.findOne({ _id: userID })
+    .then((response) => {
+      if (response) {
+        //user exists
+        const hashedPassword = response.password;
+
+        bcrypt
+          .compare(password, hashedPassword)
+          .then(async (response) => {
+            if (response) {
+              //correct pass
+              //ensure no one has the new number
+
+              User.find({ phoneNumber })
+                .then(async (response) => {
+                  if (response.length > 0) {
+                    //number is registered
+                    res.json({
+                      status: "Failed",
+                      message: "Phone number already registered. Use another",
+                    });
+                  } else {
+                    //not registered
+                    //change phone number
+                    await User.updateOne(
+                      { _id: userID },
+                      { phoneNumber: phoneNumber }
+                    )
+                      .then(() => {
+                        res.json({
+                          status: "Success",
+                          message: "Phone number updated successfully",
+                        });
+                      })
+                      .catch((err) => {
+                        console.log(err);
+                        res.json({
+                          status: "Failed",
+                          message:
+                            "Error occured while updating user phone number",
+                        });
+                      });
+                  }
+                })
+                .catch((err) => {
+                  console.log(err);
+                  res.json({
+                    status: "Failed",
+                    message: "Error occured while checking existing records",
+                  });
+                });
+            } else {
+              //wrong password
+              res.json({
+                status: "Failed",
+                message: "Incorrect password",
+              });
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+            res.json({
+              status: "Failed",
+              message: "Error occured while comparing passwords",
+            });
+          });
+      } else {
+        //user doesnt exist
+        res.json({
+          status: "Failed",
+          message: "User not found",
+        });
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.json({
+        status: "Failed",
+        message: "Error occured while checking user records",
+      });
+    });
 });
 
 module.exports = router;
