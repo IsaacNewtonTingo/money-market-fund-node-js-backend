@@ -589,4 +589,27 @@ router.post("/reset-password", (req, res) => {
     });
 });
 
+//get user profile
+router.get("/get-user-profile/:id", async (req, res) => {
+  const userID = req.params.id;
+  if (!userID) {
+    res.json({
+      status: "Failed",
+      message: "User ID is missing",
+    });
+  } else {
+    await User.findOne({ _id: userID }, "-password -verified")
+      .then((response) => {
+        res.send(response);
+      })
+      .catch((err) => {
+        console.log(err);
+        res.json({
+          status: "Failed",
+          message: "An error occured while getting user records",
+        });
+      });
+  }
+});
+
 module.exports = router;
