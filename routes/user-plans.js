@@ -3,6 +3,17 @@ const InvestmentPlan = require("../models/investment-plans");
 const User = require("../models/user");
 const UserPlan = require("../models/user-plans");
 const router = express.Router();
+const nodemailer = require("nodemailer");
+
+require("dotenv").config;
+
+let transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.AUTH_EMAIL,
+    pass: process.env.AUTH_PASS,
+  },
+});
 
 //join plan
 router.post("/join-plan", async (req, res) => {
@@ -23,12 +34,15 @@ router.post("/join-plan", async (req, res) => {
     await User.findOne({ _id: userID })
       .then(async (response) => {
         if (response) {
+          const { email, firstName, lastName } = response;
           //user found
           //check if plan exists
           await InvestmentPlan.findOne({ _id: planID })
             .then(async (response) => {
               if (response) {
                 //plan found
+
+                const { investmentPlanName } = response;
 
                 const newUserPlan = new UserPlan({
                   user: userID,
@@ -44,11 +58,30 @@ router.post("/join-plan", async (req, res) => {
 
                 await newUserPlan
                   .save()
-                  .then(() => {
-                    res.json({
-                      status: "Success",
-                      message: "Plan created successfully",
-                    });
+                  .then(async () => {
+                    //send email
+                    const mailOptions = {
+                      from: process.env.AUTH_EMAIL,
+                      to: email,
+                      subject: "Savings plan",
+                      html: `<p>Hello <strong>${firstName} ${lastName}</strong>,<br/>You have successfully created a <strong>${investmentPlanName}</strong> savings plan. This is a good step and we encounrage you to keep saving. Your funds are safe with us. Take care of uncertainity</p>`,
+                    };
+
+                    await transporter
+                      .sendMail(mailOptions)
+                      .then(() => {
+                        res.json({
+                          status: "Success",
+                          message: "Plan created successfully",
+                        });
+                      })
+                      .catch((err) => {
+                        console.log(err);
+                        res.json({
+                          status: "Failed",
+                          message: "An error occured while sending email",
+                        });
+                      });
                   })
                   .catch((err) => {
                     console.log(err);

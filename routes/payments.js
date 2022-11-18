@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const request = require("request");
-const InvestmentPlan = require("../models/investment-plans");
 const User = require("../models/user");
 const UserPlan = require("../models/user-plans");
 
@@ -13,6 +12,9 @@ require("dotenv").config;
 
 const consumerKey = process.env.CONSUMER_KEY;
 const consumerSecret = process.env.CONSUMER_SECRET;
+
+// const consumerKey = "dM1AQniOznQkoFohuPGXowgMALOcUwsr";
+// const consumerSecret = "l31P1jJLbwhKkHzy";
 
 //generate acccess token
 function access(req, res, next) {
@@ -109,7 +111,7 @@ router.post("/make-payment", access, async (req, res) => {
                       PartyB: 174379,
                       PhoneNumber: parseInt(phoneNumber),
                       CallBackURL:
-                        "https://6fba-105-27-98-86.ngrok.io/api/user/payments/payment-response",
+                        "https://7336-105-27-98-86.ngrok.io/api/user/payments/payment-response",
                       AccountReference: "CompanyXLTD",
                       TransactionDesc: "Payment of X",
                     },
