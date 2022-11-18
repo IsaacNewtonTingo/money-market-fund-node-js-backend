@@ -1,14 +1,23 @@
 const express = require("express");
 const router = express.Router();
 const request = require("request");
+const datetime = require("node-datetime");
+const nodemailer = require("nodemailer");
+
 const User = require("../models/user");
 const UserPlan = require("../models/user-plans");
-
-const datetime = require("node-datetime");
 const PendingPayment = require("../models/pending-payments");
 const CompletedPayment = require("../models/completed-payments");
 
 require("dotenv").config;
+
+let transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.AUTH_EMAIL,
+    pass: process.env.AUTH_PASS,
+  },
+});
 
 const consumerKey = process.env.CONSUMER_KEY;
 const consumerSecret = process.env.CONSUMER_SECRET;
@@ -209,6 +218,14 @@ router.post("/payment-response", async (req, res) => {
       },
       { verified: true }
     )
+      .populate("user")
+      .populate({
+        path: "userPlan",
+        populate: {
+          path: "plan",
+          select: "investmentPlanName",
+        },
+      })
       .then(async (response) => {
         console.log(
           "-----------Finished updating pending payment records----------"
@@ -218,6 +235,8 @@ router.post("/payment-response", async (req, res) => {
           //add records to completed payments
 
           const { user, userPlan } = response;
+          const { firstName, lastName, email } = user;
+          const investmentPlanName = response.userPlan.plan.investmentPlanName;
 
           const newCompletedPayment = new CompletedPayment({
             user: user,
@@ -239,9 +258,19 @@ router.post("/payment-response", async (req, res) => {
                   $and: [{ user: user }, { _id: userPlan }],
                 },
                 { active: true, $inc: { amountAvailable: amount } }
-              ).then((response) => {
+              ).then(async (response) => {
                 if (response) {
                   console.log("Payment successfully made");
+
+                  //send email to me and the client
+                  const mailOptions = {
+                    from: process.env.AUTH_EMAIL,
+                    to: email,
+                    subject: "Pament confirmation",
+                    html: `<p>Hello <strong>${firstName} ${lastName}</strong>,<br/>You have successfully deposited funds in your <strong>${investmentPlanName}</strong> savings plan. This is a good step and we encounrage you to keep saving. Your funds are safe with us. Take care of uncertainity</p>`,
+                  };
+
+                  await transporter.sendMail(mailOptions).then(() => {});
                 } else {
                   console.log("No updates made");
                 }

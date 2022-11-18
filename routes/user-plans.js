@@ -64,6 +64,7 @@ router.post("/join-plan", async (req, res) => {
                       from: process.env.AUTH_EMAIL,
                       to: email,
                       subject: "Savings plan",
+                      // html: { path: "../backend/views/join-plan.html" },
                       html: `<p>Hello <strong>${firstName} ${lastName}</strong>,<br/>You have successfully created a <strong>${investmentPlanName}</strong> savings plan. This is a good step and we encounrage you to keep saving. Your funds are safe with us. Take care of uncertainity</p>`,
                     };
 
