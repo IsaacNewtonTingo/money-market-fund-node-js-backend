@@ -142,6 +142,7 @@ router.get("/get-my-plans/:id", async (req, res) => {
           //get user plans
 
           await UserPlan.find({ user: userID })
+            .sort({ dateCreated: 1 })
             .populate("plan")
             .then((response) => {
               res.send(response);

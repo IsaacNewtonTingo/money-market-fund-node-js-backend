@@ -120,7 +120,7 @@ router.post("/make-payment", access, async (req, res) => {
                       PartyB: 174379,
                       PhoneNumber: parseInt(phoneNumber),
                       CallBackURL:
-                        "https://7336-105-27-98-86.ngrok.io/api/user/payments/payment-response",
+                        "https://clean-oranges-hunt-105-27-98-86.loca.lt/api/user/payments/payment-response",
                       AccountReference: "CompanyXLTD",
                       TransactionDesc: "Payment of X",
                     },

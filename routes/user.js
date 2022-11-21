@@ -319,7 +319,6 @@ router.post("/resend-email-verification-code/:id", async (req, res) => {
 
 //login
 router.post("/signin", (req, res) => {
-  console.log("Connected");
   let { email, password } = req.body;
   email = email.trim();
   password = password.trim();
