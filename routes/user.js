@@ -1101,4 +1101,7 @@ router.post("/edit-phone-number/:id", async (req, res) => {
     });
 });
 
+//get total savings
+router.get("/get-total-saving/:id", async (req, res) => {});
+
 module.exports = router;
