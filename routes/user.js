@@ -257,7 +257,8 @@ router.post("/verify-email/:id", async (req, res) => {
         //no records found
         res.json({
           status: "Failed",
-          message: "No email verification records found",
+          message:
+            "No email verification records found. You might have already verified your email",
         });
       }
     })
