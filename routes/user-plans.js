@@ -41,12 +41,13 @@ router.post("/join-plan", async (req, res) => {
             .then(async (response) => {
               if (response) {
                 //plan found
-
+                const userPlanID = Math.floor(1000 + Math.random() * 9000);
                 const { investmentPlanName } = response;
 
                 const newUserPlan = new UserPlan({
                   user: userID,
                   plan: planID,
+                  userPlanID,
                   amountAvailable: 0,
                   active: false,
                   dateCreated: Date.now(),

@@ -201,9 +201,9 @@ router.post("/payment-response", async (req, res) => {
   console.log("--------Data received in the callback url---------");
   if (req.body.Body.stkCallback.ResultCode == 0) {
     //successfull payment
-    console.log(req.body.Body.stkCallback);
     const { MerchantRequestID, CheckoutRequestID } = req.body.Body.stkCallback;
     const amount = req.body.Body.stkCallback.CallbackMetadata.Item[0].Value;
+    const mpesaCode = req.body.Body.stkCallback.CallbackMetadata.Item[1].Value;
 
     //get pending payment records
     //update pending payment records
@@ -244,6 +244,7 @@ router.post("/payment-response", async (req, res) => {
             amountPaid: amount,
             dateOfPayment: Date.now(),
             dateVerified: Date.now(),
+            mpesaCode: mpesaCode,
           });
 
           console.log(
@@ -363,6 +364,53 @@ router.post("/check-payment-status", access, async (req, res) => {
         }
       }
     );
+  }
+});
+
+//get all payments for a given user
+router.get("/get-user-payments/:id", async (req, res) => {
+  const userID = req.params.id;
+  if (!userID) {
+    res.json({
+      status: "Failed",
+      message: "User ID is missing",
+    });
+  } else {
+    //check if user exists
+    await User.findOne({ _id: userID })
+      .then(async (response) => {
+        if (response) {
+          //user exists
+          //get their payments
+          await CompletedPayment.find({ user: userID })
+            .limit(10)
+            .sort({ dateOfPayment: -1 })
+            .populate({ path: "userPlan", populate: { path: "plan" } })
+            .then((response) => {
+              res.send(response);
+            })
+            .catch((err) => {
+              console.log(err);
+              res.json({
+                status: "Failed",
+                message: "An error occured while checking user payment records",
+              });
+            });
+        } else {
+          //no user
+          res.json({
+            status: "Failed",
+            message: "User not found",
+          });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.json({
+          status: "Failed",
+          message: "An error occured while checking user records",
+        });
+      });
   }
 });
 

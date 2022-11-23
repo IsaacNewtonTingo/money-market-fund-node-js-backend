@@ -11,6 +11,7 @@ const CompletedPaymentSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "UserPlan",
   },
+  mpesaCode: String,
 
   amountPaid: Number,
 

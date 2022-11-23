@@ -10,6 +10,7 @@ const UserPlanSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "InvestmentPlan",
   },
+  userPlanID: Number,
   amountAvailable: Number,
   active: Boolean,
   dateCreated: Date,
