@@ -136,6 +136,7 @@ router.post("/make-payment", access, async (req, res) => {
                     } else {
                       console.log("-------STK push is on the way------");
                       const responseIDs = body;
+                      const checkoutRequestID = responseIDs.CheckoutRequestID;
 
                       const newPendingPayment = new PendingPayment({
                         user: userID,
@@ -149,7 +150,9 @@ router.post("/make-payment", access, async (req, res) => {
                       await newPendingPayment
                         .save()
                         .then(() => {
-                          res.status(200).json(body);
+                          //-------------------------------------------------------------------------//
+                          checkPayment({ checkoutRequestID }, res);
+                          // res.status(200).json(body);
                         })
                         .catch((err) => {
                           console.log(err);
@@ -297,6 +300,107 @@ router.post("/payment-response", async (req, res) => {
     console.log("Payment not completed. Something went wrong");
   }
 });
+
+//check payment function
+async function checkPayment({ checkoutRequestID }, res) {
+  //generate access token
+  let CheckoutRequestID = checkoutRequestID;
+  let url =
+    "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials";
+  let auth = new Buffer.from(consumerKey + ":" + consumerSecret).toString(
+    "base64"
+  );
+  request(
+    {
+      url: url,
+      method: "get",
+      headers: {
+        Authorization: "Basic " + auth,
+      },
+    },
+    (error, response, body) => {
+      if (error) {
+        console.log(error);
+      } else {
+        const access_token = JSON.parse(body).access_token;
+
+        //check if payment was done
+        if (!CheckoutRequestID) {
+          res.json({
+            status: "Failed",
+            message: "Checkout request ID is required",
+          });
+        } else {
+          let auth = "Bearer " + access_token;
+          let datenow = datetime.create();
+          const timestamp = datenow.format("YmdHMS");
+
+          const password = new Buffer.from(
+            "174379" +
+              "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919" +
+              timestamp
+          ).toString("base64");
+
+          var interval = setInterval(() => {
+            console.log("Checking payment");
+            request(
+              {
+                url: "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query",
+                method: "POST",
+                headers: {
+                  Authorization: auth,
+                },
+                json: {
+                  BusinessShortCode: 174379,
+                  Password: password,
+                  Timestamp: timestamp,
+                  CheckoutRequestID: CheckoutRequestID,
+                },
+              },
+              async function (error, response, body) {
+                if (error) {
+                  console.log(error);
+                  clearTimeout(timeout);
+                  clearInterval(interval);
+
+                  res.json({
+                    status: "Failed",
+                    message:
+                      "Something went wrong while trying to process your request",
+                  });
+                } else {
+                  if (body.ResultCode === "0") {
+                    //Transaction success
+                    clearTimeout(timeout);
+                    clearInterval(interval);
+
+                    console.log("Payment successfull");
+                    res.json({
+                      status: "Success",
+                      message: body.ResultDesc,
+                    });
+                  }
+                }
+              }
+            );
+          }, 1000);
+
+          const timeout = setTimeout(() => {
+            clearTimeout(timeout);
+            clearInterval(interval);
+
+            console.log("Payment not made");
+            res.json({
+              status: "Failed",
+              message:
+                "You did not complete the payment process. Please make sure you are next to your phone and make the payment",
+            });
+          }, 20000);
+        }
+      }
+    }
+  );
+}
 
 //check if user has paid
 router.post("/check-payment-status", access, async (req, res) => {
