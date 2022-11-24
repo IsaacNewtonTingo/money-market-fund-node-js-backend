@@ -377,7 +377,7 @@ async function checkPayment({ checkoutRequestID }, res) {
                     console.log("Payment successfull");
                     res.json({
                       status: "Success",
-                      message: body.ResultDesc,
+                      message: "You have successfully made your payment",
                     });
                   }
                 }
