@@ -395,7 +395,7 @@ async function checkPayment({ checkoutRequestID }, res) {
               message:
                 "You did not complete the payment process. Please make sure you are next to your phone and make the payment",
             });
-          }, 20000);
+          }, 60000);
         }
       }
     }
