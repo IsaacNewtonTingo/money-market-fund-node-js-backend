@@ -518,4 +518,53 @@ router.get("/get-user-payments/:id", async (req, res) => {
   }
 });
 
+//B2C integration
+router.post("/b2c", access, async (req, res) => {
+  let auth = "Bearer " + req.access_token;
+
+  request(
+    {
+      url: "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest",
+      method: "POST",
+      headers: {
+        Authorization: auth,
+      },
+      json: {
+        InitiatorName: "testapi",
+        SecurityCredential:
+          "nBYA4WNjx8Owx4OxbCx2a3hTrjw8vapUN+JiG30Jd4+BURcV5VMqnbY+qLmwuGhQMebpt4GAxCjDcLmQFcMpaXS7ExrpwkVcVhgubaM+cCq38UWJhBrLlY2lFTzk17WDFpVNfb9tzLigtbKe05SXHf0GeUx+itgBgzgcKSz/0QKfxHjvqTzcMkfZU3XoJ8l5OoG6A8vIuRpD6CeTDoZrAoOHvZnKBlhN4bM0QahrPa7f7S65EmVzN5gOQBOq639q3EmaKZKXfoB/lKhiA/z3HfKDUBa4KRk5V/hXKb3gwAQltQc3mzGB4QRmI+629hkeL3hXdEpUOQD3U+ZyZcmBpQ==",
+        CommandID: "BusinessPayment",
+        Amount: 10,
+        PartyA: 600977,
+        PartyB: 254708374149,
+        Remarks: "Payment for parties",
+        QueueTimeOutURL:
+          "https://money-market-fund.herokuapp.com/api/user/payments/timeout-url",
+        ResultURL:
+          "https://money-market-fund.herokuapp.com/api/user/payments/result-url",
+        Occassion: "Christmas",
+      },
+    },
+    async function (error, response, body) {
+      if (error) {
+        console.log(error);
+      } else {
+        res.send(body);
+      }
+    }
+  );
+});
+
+//timeout url
+router.post("/timeout-url", async (req, res) => {
+  console.log("------------Timeout----------");
+  console.log(req.body);
+});
+
+//result url
+router.post("/result-url", async (req, res) => {
+  console.log("------------result----------");
+  console.log(req.body);
+});
+
 module.exports = router;
