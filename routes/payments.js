@@ -530,12 +530,12 @@ router.post("/b2c", access, async (req, res) => {
         Authorization: auth,
       },
       json: {
-        InitiatorName: "testapi",
+        InitiatorName: "apitest342",
         SecurityCredential:
           "nBYA4WNjx8Owx4OxbCx2a3hTrjw8vapUN+JiG30Jd4+BURcV5VMqnbY+qLmwuGhQMebpt4GAxCjDcLmQFcMpaXS7ExrpwkVcVhgubaM+cCq38UWJhBrLlY2lFTzk17WDFpVNfb9tzLigtbKe05SXHf0GeUx+itgBgzgcKSz/0QKfxHjvqTzcMkfZU3XoJ8l5OoG6A8vIuRpD6CeTDoZrAoOHvZnKBlhN4bM0QahrPa7f7S65EmVzN5gOQBOq639q3EmaKZKXfoB/lKhiA/z3HfKDUBa4KRk5V/hXKb3gwAQltQc3mzGB4QRmI+629hkeL3hXdEpUOQD3U+ZyZcmBpQ==",
         CommandID: "BusinessPayment",
-        Amount: 10,
-        PartyA: 600977,
+        Amount: 1230,
+        PartyA: 601342,
         PartyB: 254708374149,
         Remarks: "Payment for parties",
         QueueTimeOutURL:
