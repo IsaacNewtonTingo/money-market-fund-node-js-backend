@@ -564,7 +564,7 @@ router.post("/timeout-url", async (req, res) => {
 //result url
 router.post("/result-url", async (req, res) => {
   console.log("------------result----------");
-  console.log(req.body.Result.ReferenceData);
+  console.log(req.body.Result);
 });
 
 module.exports = router;
