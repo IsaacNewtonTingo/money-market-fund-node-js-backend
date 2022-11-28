@@ -41,4 +41,19 @@ router.post("/add-investmen-plan", async (req, res) => {
   }
 });
 
+//get plans
+router.get("/get-savings-plan", async (req, res) => {
+  await InvestmentPlan.find({})
+    .then((response) => {
+      res.send(response);
+    })
+    .catch((err) => {
+      console.log(err);
+      res.json({
+        status: "Failed",
+        message: "An error occured while trying to get savings plans",
+      });
+    });
+});
+
 module.exports = router;
