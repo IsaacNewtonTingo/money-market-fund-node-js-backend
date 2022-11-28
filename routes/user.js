@@ -384,7 +384,7 @@ router.post("/signin", (req, res) => {
 
 //password reset
 router.post("/request-password-reset", (req, res) => {
-  const { email, redirectUrl } = req.body;
+  const { email } = req.body;
 
   if (!email) {
     res.json({
@@ -401,7 +401,7 @@ router.post("/request-password-reset", (req, res) => {
               message: "Email hasn't been verified yet. Check your email",
             });
           } else {
-            sendResetEmail(data[0], redirectUrl, res);
+            sendResetEmail(data[0], res);
           }
         } else {
           res.json({
@@ -419,7 +419,7 @@ router.post("/request-password-reset", (req, res) => {
   }
 });
 
-const sendResetEmail = ({ _id, email }, redirectUrl, res) => {
+const sendResetEmail = ({ _id, email }, res) => {
   const resetString = Math.floor(1000 + Math.random() * 9000).toString();
 
   PasswordReset.deleteMany({ userId: _id })
@@ -532,7 +532,7 @@ router.post("/reset-password", (req, res) => {
                             res.json({
                               status: "Success",
                               message:
-                                "You have successfully reset your password",
+                                "You have successfully reset your password. You can now login",
                             });
                           })
                           .catch((err) => {
