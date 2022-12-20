@@ -532,7 +532,7 @@ router.post("/b2c", access, async (req, res) => {
       json: {
         InitiatorName: "apitest342",
         SecurityCredential:
-          "nBYA4WNjx8Owx4OxbCx2a3hTrjw8vapUN+JiG30Jd4+BURcV5VMqnbY+qLmwuGhQMebpt4GAxCjDcLmQFcMpaXS7ExrpwkVcVhgubaM+cCq38UWJhBrLlY2lFTzk17WDFpVNfb9tzLigtbKe05SXHf0GeUx+itgBgzgcKSz/0QKfxHjvqTzcMkfZU3XoJ8l5OoG6A8vIuRpD6CeTDoZrAoOHvZnKBlhN4bM0QahrPa7f7S65EmVzN5gOQBOq639q3EmaKZKXfoB/lKhiA/z3HfKDUBa4KRk5V/hXKb3gwAQltQc3mzGB4QRmI+629hkeL3hXdEpUOQD3U+ZyZcmBpQ==",
+          "juPO3mlv/YKcZN3FyGmjW81BO3d0qYVuSlyVGvr+uevXeaKwpZu5L415tEypKdekqJCdzc75hlYbbL+o3HpvNgnP5vf5yO1CNgHX8UrctyX+oturBR1J2xwijwqF78HiNNiDkDOb9nB2XbzfVlOWTrzZT3NoU3NCs5C9o+2UsjXwPW+ITbijn9saMcs/EBw1ILV6eNFxIyUqtTIgh/2gbSlYUd+uXwgi4cbT2M7nSqsY9EajyGEQItT42ZoTbfxK5JYGPn4FGic7//UMlwGzDAYsNWduKUblkWs67iK/BwiT5Y3ib9ghp5rzpLD9pRDY5IUG2UlV2sBHS18NdIx1Ig==",
         CommandID: "BusinessPayment",
         Amount: 1230,
         PartyA: 601342,
